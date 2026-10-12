@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>آسمان ما</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Vazirmatn:wght@300;400;500;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+html{background:#0b0716;color-scheme:dark}
+body{margin:0}
+
+/* Layout: a fixed WebGL night sky (a galaxy that gathers into a heart) behind a
+   right-to-left scroll story. Text sits on frosted panels so it stays readable. */
+:root {
+  --night: #0b0716;
+  --dusk: #1a1030;
+  --panel: rgba(22, 13, 40, 0.62);
+  --rose: #ff7d96;
+  --ember: #ffb487;
+  --violet: #9a7bff;
+  --mist: #f3eaf8;
+  --dim: #b3a4c8;
+  --line: rgba(255, 190, 210, 0.2);
+  --font-display: 'Aref Ruqaa', 'Noto Naskh Arabic', 'Vazirmatn', serif;
+  --font-body: 'Vazirmatn', 'Tahoma', 'Noto Sans Arabic', sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: radial-gradient(90% 60% at 20% 0%, #2a1850 0%, var(--dusk) 40%, var(--night) 100%) fixed, var(--night);
+  color: var(--mist);
+  font-family: var(--font-body);
+  direction: rtl;
+  line-height: 1.9;
+  padding-inline: 16px;
+  padding-block: 24px 64px;
+  overflow-x: hidden;
+}
+#gl { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; display: block; }
+main { position: relative; z-index: 1; max-width: 960px; margin-inline: auto; display: flex; flex-direction: column; gap: 110px; }
+h1, h2 { font-family: var(--font-display); font-weight: 700; text-wrap: balance; line-height: 1.45; margin: 0; }
+p { margin: 0; }
+.eyebrow { font-size: 0.9rem; color: var(--ember); font-weight: 500; letter-spacing: 0.03em; }
+.glass { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+:focus-visible { outline: 2px solid var(--ember); outline-offset: 3px; }
+
+/* music toggle */
+.music { position: fixed; z-index: 10; inset-inline-start: 14px; top: calc(env(safe-area-inset-top, 0px) + 14px); appearance: none; border: 1px solid var(--line); background: var(--panel); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--mist); font: inherit; font-size: 0.85rem; padding: 7px 14px; border-radius: 999px; cursor: pointer; display: flex; gap: 8px; align-items: center; }
+.music i { font-style: normal; color: var(--rose); }
+.music[aria-pressed="true"] { border-color: var(--rose); }
+
+/* hero */
+.hero { min-height: 660px; display: grid; grid-template-columns: 1fr; align-content: center; gap: 18px; padding-block-start: 330px; }
+.hero h1 { font-size: clamp(2.6rem, 9vw, 4.8rem); text-shadow: 0 2px 30px rgba(11, 7, 22, 0.8); }
+.hero h1 em { font-style: normal; background: linear-gradient(100deg, var(--rose), var(--ember)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero .sub { color: var(--mist); opacity: 0.85; max-width: 32ch; font-size: 1.05rem; text-shadow: 0 1px 14px rgba(11, 7, 22, 0.9); }
+.counter { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; max-width: 460px; }
+.cell { padding: 12px 6px 8px; text-align: center; border-radius: 16px; }
+.cell b { display: block; font-size: clamp(1.7rem, 7vw, 2.4rem); font-weight: 300; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.cell span { font-size: 0.8rem; color: var(--dim); }
+.cue { color: var(--dim); font-size: 0.85rem; margin-top: 10px; }
+@media (min-width: 860px) {
+  .hero { grid-template-columns: 1fr 1fr; padding-block-start: 0; }
+  .hero > .txt { grid-column: 1; display: flex; flex-direction: column; gap: 18px; }
+}
+.sec-head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 26px; }
+.sec-head h2 { font-size: clamp(1.9rem, 6vw, 2.8rem); text-shadow: 0 2px 24px rgba(11, 7, 22, 0.9); }
+.sec-head p.lead { color: var(--dim); max-width: 46ch; }
+
+/* timeline */
+.tl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; position: relative; }
+.tl::before { content: ""; position: absolute; inset-block: 18px; inset-inline-start: 11px; width: 1px; background: linear-gradient(var(--rose), var(--violet)); opacity: 0.6; }
+.tl li { position: relative; padding: 14px 18px; margin-inline-start: 38px; opacity: 0.4; transform: translateY(16px); transition: opacity .6s ease, transform .6s ease; }
+.tl li.in { opacity: 1; transform: none; }
+.tl li::before { content: ""; position: absolute; inset-inline-start: -35px; top: 22px; width: 15px; height: 15px; border-radius: 50%; background: var(--rose); box-shadow: 0 0 0 6px rgba(255, 125, 150, 0.2), 0 0 18px var(--rose); }
+.tl li.now::before { background: var(--ember); box-shadow: 0 0 0 6px rgba(255, 180, 135, 0.22), 0 0 18px var(--ember); }
+.tl .when { font-size: 0.85rem; color: var(--ember); font-weight: 500; }
+.tl .when b { font-family: var(--font-display); font-size: 1.15rem; margin-inline-end: 8px; color: var(--mist); }
+.tl .what { font-size: 1.02rem; }
+
+/* flip cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 14px; }
+.rc { appearance: none; background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; perspective: 900px; text-align: inherit; min-width: 0; }
+.tilt { transition: transform .15s ease-out; transform-style: preserve-3d; }
+.flip { position: relative; height: 200px; transition: transform .7s cubic-bezier(.2, .8, .2, 1); transform-style: preserve-3d; }
+.rc.on .flip { transform: rotateY(180deg); }
+.face { position: absolute; inset: 0; border-radius: 20px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; -webkit-backface-visibility: hidden; backface-visibility: hidden; border: 1px solid var(--line); }
+.front { background: linear-gradient(155deg, rgba(70, 40, 110, 0.75), rgba(22, 13, 40, 0.8)); }
+.front .n { font-family: var(--font-display); font-size: 2.6rem; line-height: 1; color: var(--rose); }
+.front .t { font-family: var(--font-display); font-size: 1.5rem; }
+.front .tap { font-size: 0.78rem; color: var(--dim); }
+.back { transform: rotateY(180deg); background: linear-gradient(155deg, rgba(255, 125, 150, 0.9), rgba(255, 180, 135, 0.92)); color: #2a1030; justify-content: center; font-size: 1.02rem; font-weight: 500; line-height: 2; }
+
+/* energy slider */
+.energy { padding: clamp(20px, 4vw, 34px); display: flex; flex-direction: column; gap: 14px; }
+.energy label { font-family: var(--font-display); font-size: 1.5rem; }
+.energy input[type=range] { width: 100%; accent-color: var(--rose); height: 28px; direction: rtl; }
+.energy output { color: var(--ember); font-size: 1.05rem; min-height: 2em; display: block; }
+
+/* letter and hold */
+.letterwrap { padding-block-start: 340px; }
+.letter { padding: clamp(22px, 5vw, 46px); display: flex; flex-direction: column; gap: 16px; }
+.letter p { font-size: 1.1rem; line-height: 2.1; max-width: 52ch; }
+.letter .sign { font-family: var(--font-display); font-size: 1.45rem; color: var(--ember); }
+.holdbox { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; margin-top: 8px; }
+.hold { appearance: none; background: none; border: 0; padding: 0; cursor: pointer; width: 124px; height: 124px; position: relative; color: var(--mist); font: inherit; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; flex: none; }
+.hold svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.hold circle { fill: none; stroke-width: 6; }
+.hold .track { stroke: var(--line); }
+.hold .bar { stroke: url(#hg); stroke-linecap: round; stroke-dasharray: 327; stroke-dashoffset: 327; }
+.hold span { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--font-display); font-size: 1.25rem; }
+.holdtxt { flex: 1 1 220px; min-width: 0; color: var(--dim); }
+.final { font-family: var(--font-display); font-size: clamp(1.4rem, 4.4vw, 2rem); line-height: 1.9; color: var(--rose); }
+.final[hidden] { display: none; }
+footer { text-align: center; color: var(--dim); font-size: 0.85rem; }
+
+.fh { position: fixed; z-index: 20; pointer-events: none; color: var(--rose); animation: rise 2.4s ease-out forwards; }
+@keyframes rise { 0% { transform: translate(0, 0) scale(.6); opacity: 1; } 100% { transform: translate(var(--dx), -240px) scale(1.4); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .tl li { transition: none; opacity: 1; transform: none; }
+  .flip, .tilt { transition: none; }
+  .fh { animation-duration: .01s; }
+}
+</style>
+</head>
+<body>
+
+
+<canvas id="gl" aria-hidden="true"></canvas>
+<button class="music" id="music" type="button" aria-pressed="false"><i>♪</i><span id="musicTxt">موسیقی</span></button>
+
+<main lang="fa" dir="rtl">
+  <section class="hero" data-pos="hero" data-morph="1">
+    <div class="txt">
+      <p class="eyebrow" id="since">از همون روز اول</p>
+      <h1>این <em id="dnum">۵</em> روز<br>مال ما بود</h1>
+      <p class="sub">تا حالا هر ثانیه‌اش رو شمردم. این آسمون رو فقط برای تو ساختم.</p>
+      <div class="counter" role="timer" aria-label="زمان گذشته">
+        <div class="cell glass"><b id="cd">۰</b><span>روز</span></div>
+        <div class="cell glass"><b id="ch">۰۰</b><span>ساعت</span></div>
+        <div class="cell glass"><b id="cm">۰۰</b><span>دقیقه</span></div>
+        <div class="cell glass"><b id="cs">۰۰</b><span>ثانیه</span></div>
+      </div>
+      <p class="cue">به قلب دست بزن و بعد بیا پایین ↓</p>
+    </div>
+  </section>
+
+  <section data-pos="bg" data-morph="0">
+    <div class="sec-head">
+      <p class="eyebrow">فصل اول</p>
+      <h2>روز به روز</h2>
+      <p class="lead">این‌ها خلاصه‌ی روزهاییه که از آشنایی ما گذشته.</p>
+    </div>
+    <ul class="tl" id="tl"></ul>
+  </section>
+
+  <section data-pos="bg" data-morph="0">
+    <div class="sec-head">
+      <p class="eyebrow">فصل دوم</p>
+      <h2>هشت دلیل</h2>
+      <p class="lead">روی هر کارت بزن تا ببینی چرا.</p>
+    </div>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <section data-pos="bg" data-morph="0">
+    <div class="sec-head">
+      <p class="eyebrow">فصل سوم</p>
+      <h2>آسمون رو روشن کن</h2>
+    </div>
+    <div class="energy glass">
+      <label for="energy">چقدر دلت برام تنگ می‌شه؟</label>
+      <input id="energy" type="range" min="0" max="100" value="35">
+      <output id="energyOut" for="energy" aria-live="polite"></output>
+    </div>
+  </section>
+
+  <section class="letterwrap" data-pos="letter" data-morph="1">
+    <div class="letter glass">
+      <p class="eyebrow">فصل آخر</p>
+      <p>سلام. می‌دونم هنوز زمان زیادی نگذشته. ولی بعضی آدم‌ها رو همون اول می‌فهمی که قراره برات مهم بشن.</p>
+      <p>این آسمون رو ساختم چون دلم می‌خواست یه جوری بهت بگم این روزها برام چی بودن. کنار تو بودن راحته و منو خوشحال می‌کنه.</p>
+      <p class="sign">همونی که دلش پیش توئه</p>
+      <div class="holdbox">
+        <button class="hold" id="hold" type="button" aria-label="نگه دار تا یه چیزی رو ببینی">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <defs><linearGradient id="hg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7d96"/><stop offset="1" stop-color="#ffb487"/></linearGradient></defs>
+            <circle class="track" cx="60" cy="60" r="52"/>
+            <circle class="bar" id="bar" cx="60" cy="60" r="52"/>
+          </svg>
+          <span>نگه دار</span>
+        </button>
+        <p class="holdtxt" id="holdtxt">انگشتت رو روی دایره نگه دار تا آخر ببینی.</p>
+      </div>
+      <p class="final" id="final" hidden>کنار تو بودن، قشنگ‌ترین اتفاق این روزامه. اگه تو هم همین حس رو داری، فقط بگو «منم».</p>
+    </div>
+  </section>
+
+  <footer>ساخته شده فقط برای تو</footer>
+</main>
+
+<script>
+(function () {
+  /* ---- things to personalise ---- */
+  var START = new Date('2026-10-07T00:00:00+03:30');
+  var DAYS = ['روز اول', 'روز دوم', 'روز سوم', 'روز چهارم', 'روز پنجم'];
+  var MEMS = [
+    'همون روز اول حس کردم این آشنایی یه چیز خاصه.',
+    'فکر کردن به تو از همون روز دوم شروع شد و دیگه تموم نشد.',
+    'هر پیامت یه اتفاق کوچیک خوب بود.',
+    'دیگه خودمم نمی‌خواستم وانمود کنم بی‌تفاوتم.',
+    'و حالا دارم برات یه آسمون می‌سازم.'
+  ];
+  var REASONS = [
+    ['خنده‌ات', 'هنوز چند روزه می‌شناسمت، ولی خنده‌ات حال منو عوض می‌کنه.'],
+    ['وقتی کنارتم', 'کنارت وقت یهو سریع می‌گذره، انگار کسی ساعت رو تند کرده.'],
+    ['صدات', 'وقتی حرف می‌زنی، دوست دارم تا آخرش گوش کنم.'],
+    ['خودت بودن', 'کنارت لازم نیست کسی غیر از خودم باشم.'],
+    ['اسمت', 'وقتی اسمت روی گوشی میاد، بی‌اختیار لبخند می‌زنم.'],
+    ['فردا', 'دلم می‌خواد ببینم فردا چی میشه، چون تو توش هستی.'],
+    ['سکوتت', 'حتی ساکت بودن کنار تو راحته.'],
+    ['ذهنم', 'از اون روز، یه گوشه از ذهنم همیشه به تو فکر می‌کنه.']
+  ];
+  var ENERGY_TEXT = ['یه کم', 'خوب، یه کم دیگه', 'خیلی', 'خیلی خیلی', 'اونقدر که آسمون نور می‌گیره'];
+
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var $ = function (id) { return document.getElementById(id); };
+  var fa = function (s) { return String(s).replace(/\d/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[d]; }); };
+  var pad = function (n) { return fa(('0' + n).slice(-2)); };
+  var faDate = function (d, o) { try { return d.toLocaleDateString('fa-IR', o); } catch (e) { return ''; } };
+
+  /* ---- counter ---- */
+  function tick() {
+    var diff = Math.max(0, Date.now() - START.getTime());
+    var d = Math.floor(diff / 864e5);
+    $('cd').textContent = fa(d);
+    $('dnum').textContent = fa(d);
+    $('ch').textContent = pad(Math.floor(diff / 36e5) % 24);
+    $('cm').textContent = pad(Math.floor(diff / 6e4) % 60);
+    $('cs').textContent = pad(Math.floor(diff / 1e3) % 60);
+  }
+  tick(); setInterval(tick, 1000);
+  var sinceTxt = faDate(START, { day: 'numeric', month: 'long', year: 'numeric' });
+  if (sinceTxt) $('since').textContent = 'از ' + sinceTxt + ' تا همین لحظه';
+
+  /* ---- timeline ---- */
+  var dayCount = Math.min(5, Math.max(1, Math.floor((Date.now() - START.getTime()) / 864e5)));
+  var tl = $('tl'), html = '';
+  for (var i = 0; i < dayCount; i++) {
+    var dt = new Date(START.getTime() + i * 864e5);
+    html += '<li class="glass"><div class="when"><b>' + DAYS[i] + '</b>' + faDate(dt, { day: 'numeric', month: 'long' }) + '</div><div class="what">' + MEMS[i] + '</div></li>';
+  }
+  html += '<li class="glass now"><div class="when"><b>امروز</b>' + faDate(new Date(), { day: 'numeric', month: 'long' }) + '</div><div class="what">هنوز اولشه و من از هر روزش خوشحالم.</div></li>';
+  tl.innerHTML = html;
+  var lis = tl.querySelectorAll('li');
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }); }, { threshold: 0.2 });
+    lis.forEach(function (l) { io.observe(l); });
+  } else { lis.forEach(function (l) { l.classList.add('in'); }); }
+
+  /* ---- flip cards ---- */
+  var cards = $('cards'), ch = '';
+  REASONS.forEach(function (r, i) {
+    ch += '<button class="rc" type="button" aria-pressed="false"><div class="tilt"><div class="flip">' +
+      '<div class="face front"><span class="n">' + fa(i + 1) + '</span><span class="t">' + r[0] + '</span><span class="tap">بزن تا باز بشه</span></div>' +
+      '<div class="face back">' + r[1] + '</div></div></div></button>';
+  });
+  cards.innerHTML = ch;
+  cards.querySelectorAll('.rc').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var on = b.classList.toggle('on');
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      state.pulse = Math.max(state.pulse, 0.5);
+    });
+    var tilt = b.querySelector('.tilt');
+    b.addEventListener('pointermove', function (e) {
+      if (reduce || e.pointerType === 'touch') return;
+      var r = b.getBoundingClientRect();
+      var x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+      tilt.style.transform = 'rotateX(' + (-y * 12).toFixed(1) + 'deg) rotateY(' + (x * 14).toFixed(1) + 'deg)';
+    });
+    b.addEventListener('pointerleave', function () { tilt.style.transform = ''; });
+  });
+
+  /* ---- shared scene state ---- */
+  var state = { morph: 0, morphT: 0, pulse: 0, energy: 0.35, burst: 0, burstV: 0, px: 0, py: 0, kind: 'hero' };
+
+  /* ---- energy slider ---- */
+  function setEnergy() {
+    var v = +$('energy').value;
+    state.energy = v / 100;
+    $('energyOut').textContent = fa(v) + '٪ · ' + ENERGY_TEXT[Math.min(4, Math.floor(v / 20.01))];
+  }
+  $('energy').addEventListener('input', setEnergy);
+  setEnergy();
+
+  /* ---- floating hearts ---- */
+  function hearts(x, y, n) {
+    if (reduce) return;
+    for (var i = 0; i < n; i++) {
+      (function (i) {
+        setTimeout(function () {
+          var h = document.createElement('span');
+          h.className = 'fh'; h.textContent = '♥';
+          h.style.left = (x + (Math.random() - 0.5) * 70) + 'px';
+          h.style.top = (y + (Math.random() - 0.5) * 20) + 'px';
+          h.style.fontSize = (16 + Math.random() * 22) + 'px';
+          h.style.setProperty('--dx', ((Math.random() - 0.5) * 160) + 'px');
+          document.body.appendChild(h);
+          setTimeout(function () { h.remove(); }, 2500);
+        }, i * 60);
+      })(i);
+    }
+  }
+  document.addEventListener('pointerdown', function (e) {
+    if (e.target.closest('button, input, a')) return;
+    state.pulse = 1; hearts(e.clientX, e.clientY, 5);
+  });
+
+  /* ---- hold to reveal ---- */
+  var hold = $('hold'), bar = $('bar'), prog = 0, holding = false, done = false, last = 0;
+  function holdLoop(t) {
+    var dt = Math.min(0.05, (t - last) / 1000); last = t;
+    if (!done) {
+      prog += holding ? dt / 1.8 : -dt / 0.9;
+      prog = Math.max(0, Math.min(1, prog));
+      bar.style.strokeDashoffset = String(327 * (1 - prog));
+      state.pulse = Math.max(state.pulse, prog * 0.6);
+      if (prog >= 1) { done = true; finish(); }
+    }
+    if (!done && (holding || prog > 0)) requestAnimationFrame(holdLoop);
+  }
+  function startHold() { if (done) return; holding = true; last = performance.now(); requestAnimationFrame(holdLoop); }
+  function endHold() { holding = false; }
+  function finish() {
+    var r = hold.getBoundingClientRect();
+    hearts(r.left + r.width / 2, r.top, 26);
+    state.burstV = 1; state.pulse = 1;
+    $('final').hidden = false;
+    $('holdtxt').textContent = 'این رو فقط برای تو نوشتم.';
+    hold.querySelector('span').textContent = '♥';
+  }
+  hold.addEventListener('pointerdown', function (e) { e.preventDefault(); startHold(); });
+  hold.addEventListener('pointerup', endHold);
+  hold.addEventListener('pointerleave', endHold);
+  hold.addEventListener('pointercancel', endHold);
+  hold.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  hold.addEventListener('keydown', function (e) { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); startHold(); } });
+  hold.addEventListener('keyup', function (e) { if (e.key === ' ' || e.key === 'Enter') endHold(); });
+
+  /* ---- music (generated, starts only on tap) ---- */
+  var AC = null, master, bus, musicOn = false, nextT = 0, timer = null, barN = 0;
+  var CH = [[57, 60, 64, 67], [53, 57, 60, 64], [48, 52, 55, 59], [55, 59, 62, 66]];
+  var ARP = [0, 1, 2, 3, 2, 1, 2, 1];
+  function mtof(n) { return 440 * Math.pow(2, (n - 69) / 12); }
+  function initAudio() {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return false;
+    AC = new Ctx(); master = AC.createGain(); master.gain.value = 0;
+    var len = Math.floor(AC.sampleRate * 2.6), buf = AC.createBuffer(2, len, AC.sampleRate);
+    for (var c = 0; c < 2; c++) { var d = buf.getChannelData(c); for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6); }
+    var conv = AC.createConvolver(); conv.buffer = buf;
+    var wet = AC.createGain(); wet.gain.value = 0.55;
+    var dry = AC.createGain(); dry.gain.value = 0.7;
+    var lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2000;
+    bus = AC.createGain();
+    bus.connect(lp); lp.connect(dry); lp.connect(conv); conv.connect(wet);
+    dry.connect(master); wet.connect(master); master.connect(AC.destination);
+    return true;
+  }
+  function note(f, t, dur, vol, type) {
+    var o = AC.createOscillator(), g = AC.createGain();
+    o.type = type; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + Math.min(0.5, dur * 0.3));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(bus); o.start(t); o.stop(t + dur + 0.05);
+  }
+  function scheduleBar(t) {
+    var ch = CH[barN % 4], beat = 0.8;
+    ch.forEach(function (n, k) { note(mtof(n), t, beat * 4.4, 0.045, 'sine'); note(mtof(n) * 1.004, t, beat * 4.4, 0.03, 'triangle'); });
+    note(mtof(ch[0] - 12), t, beat * 3.8, 0.1, 'sine');
+    for (var s = 0; s < 8; s++) {
+      var n = ch[ARP[s] % 4] + 12 + ((barN + s) % 7 === 0 ? 12 : 0);
+      note(mtof(n), t + s * beat / 2, 1.1, 0.05, 'triangle');
+    }
+    barN++;
+  }
+  function pump() {
+    while (nextT < AC.currentTime + 1.6) { scheduleBar(nextT); nextT += 3.2; }
+  }
+  $('music').addEventListener('click', function () {
+    var btn = $('music');
+    if (!AC && !initAudio()) { $('musicTxt').textContent = 'موسیقی پشتیبانی نمی‌شه'; return; }
+    musicOn = !musicOn;
+    if (musicOn) {
+      AC.resume();
+      nextT = AC.currentTime + 0.1; pump();
+      timer = setInterval(pump, 400);
+      master.gain.cancelScheduledValues(AC.currentTime);
+      master.gain.linearRampToValueAtTime(0.85, AC.currentTime + 2);
+    } else {
+      master.gain.cancelScheduledValues(AC.currentTime);
+      master.gain.linearRampToValueAtTime(0, AC.currentTime + 0.8);
+      setTimeout(function () { if (!musicOn) { clearInterval(timer); AC.suspend(); } }, 1000);
+    }
+    btn.setAttribute('aria-pressed', musicOn ? 'true' : 'false');
+    $('musicTxt').textContent = musicOn ? 'موسیقی روشن' : 'موسیقی';
+  });
+
+  /* ---- WebGL: galaxy that gathers into a heart ---- */
+  var secs = [].slice.call(document.querySelectorAll('main > section[data-pos]'));
+  function pickSection() {
+    var mid = innerHeight * 0.5, best = secs[0];
+    for (var i = 0; i < secs.length; i++) {
+      var r = secs[i].getBoundingClientRect();
+      if (r.top <= mid && r.bottom >= mid) { best = secs[i]; break; }
+      if (r.top < mid) best = secs[i];
+    }
+    state.morphT = +best.dataset.morph;
+    state.kind = best.dataset.pos;
+  }
+  window.addEventListener('scroll', pickSection, { passive: true });
+  pickSection();
+
+  var renderer, scene, camera, group, mat, ready = false;
+  try {
+    var N = innerWidth < 700 ? 9000 : 15000;
+    renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: false, alpha: true });
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    renderer.setPixelRatio(dpr);
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    camera.position.z = 11;
+    group = new THREE.Group(); scene.add(group);
+
+    var gal = new Float32Array(N * 3), hea = new Float32Array(N * 3), colG = new Float32Array(N * 3), colH = new Float32Array(N * 3), rnd = new Float32Array(N * 2);
+    var cE = new THREE.Color('#ffb487'), cR = new THREE.Color('#ff7d96'), cV = new THREE.Color('#8f6bff'), cW = new THREE.Color('#ffffff'), tmp = new THREE.Color();
+    for (var i = 0; i < N; i++) {
+      var R = Math.pow(Math.random(), 1.5) * 6.8 + 0.08;
+      var br = (i % 3) / 3 * Math.PI * 2, sp = R * 0.85;
+      var rx = Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1) * R * 0.3;
+      var ry = Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1) * R * 0.14;
+      var rz = Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1) * R * 0.3;
+      gal[i * 3] = Math.cos(br + sp) * R + rx; gal[i * 3 + 1] = ry; gal[i * 3 + 2] = Math.sin(br + sp) * R + rz;
+      var f = Math.min(1, R / 6.8);
+      if (f < 0.5) tmp.copy(cE).lerp(cR, f * 2); else tmp.copy(cR).lerp(cV, (f - 0.5) * 2);
+      colG[i * 3] = tmp.r; colG[i * 3 + 1] = tmp.g; colG[i * 3 + 2] = tmp.b;
+
+      var t = Math.random() * Math.PI * 2;
+      var hx = 16 * Math.pow(Math.sin(t), 3) / 14;
+      var hy = (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) / 14;
+      var edge = Math.random() < 0.4;
+      var k = edge ? 1 : Math.pow(Math.random(), 0.5);
+      var cy = 0.17;
+      var ex = hx * k + (edge ? (Math.random() - 0.5) * 0.05 : 0), ey = (hy - cy) * k + cy + (edge ? (Math.random() - 0.5) * 0.05 : 0);
+      var th = (0.25 + 0.9 * Math.sqrt(Math.max(0, 1 - k * k))) * 0.9;
+      hea[i * 3] = ex * 2.6; hea[i * 3 + 1] = ey * 2.6; hea[i * 3 + 2] = (Math.random() - 0.5) * th * 2.2;
+      tmp.copy(cR).lerp(cE, Math.min(1, Math.max(0, (ey + 0.6) / 1.8) * 0.8 + Math.random() * 0.15));
+      if (Math.random() < 0.08) tmp.lerp(cW, 0.7);
+      colH[i * 3] = tmp.r; colH[i * 3 + 1] = tmp.g; colH[i * 3 + 2] = tmp.b;
+      rnd[i * 2] = Math.random(); rnd[i * 2 + 1] = Math.random();
+    }
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(gal, 3));
+    geo.setAttribute('aGalaxy', new THREE.BufferAttribute(gal, 3));
+    geo.setAttribute('aHeart', new THREE.BufferAttribute(hea, 3));
+    geo.setAttribute('aColor', new THREE.BufferAttribute(colG, 3));
+    geo.setAttribute('aColorH', new THREE.BufferAttribute(colH, 3));
+    geo.setAttribute('aRand', new THREE.BufferAttribute(rnd, 2));
+    mat = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      uniforms: { uMorph: { value: 0 }, uTime: { value: 0 }, uPulse: { value: 0 }, uEnergy: { value: 0.35 }, uBurst: { value: 0 }, uPx: { value: dpr } },
+      vertexShader: [
+        'attribute vec3 aGalaxy; attribute vec3 aHeart; attribute vec3 aColor; attribute vec3 aColorH; attribute vec2 aRand;',
+        'uniform float uMorph, uTime, uPulse, uEnergy, uBurst, uPx;',
+        'varying vec3 vColor; varying float vAlpha;',
+        'void main(){',
+        '  float d = clamp(uMorph * 1.7 - aRand.x * 0.7, 0.0, 1.0); d = d * d * (3.0 - 2.0 * d);',
+        '  vec3 g = aGalaxy; float r = length(g.xz);',
+        '  float a = uTime * 0.16 / (0.7 + r * 0.3); float cs = cos(a), sn = sin(a);',
+        '  g.xz = mat2(cs, -sn, sn, cs) * g.xz; g.y += sin(uTime * 0.6 + aRand.x * 40.0) * 0.06;',
+        '  vec3 h = aHeart * (1.0 + 0.035 * sin(uTime * 2.4) + uPulse * 0.16);',
+        '  h += vec3(sin(uTime * 0.9 + aRand.x * 30.0), cos(uTime * 0.8 + aRand.x * 20.0), sin(uTime * 0.7 + aRand.x * 10.0)) * 0.035;',
+        '  vec3 p = mix(g, h, d); p.y += sin(d * 3.14159) * 1.4 * (aRand.x - 0.5);',
+        '  p += normalize(p + vec3(0.001)) * uBurst * (2.0 + aRand.y * 7.0);',
+        '  vec4 mv = modelViewMatrix * vec4(p, 1.0); gl_Position = projectionMatrix * mv;',
+        '  gl_PointSize = (aRand.y * 2.4 + 0.9) * uPx * (1.0 + uEnergy * 0.9 + uPulse * 0.5) * (9.0 / -mv.z);',
+        '  float tw = 0.6 + 0.4 * sin(uTime * 2.0 + aRand.x * 100.0);',
+        '  vColor = mix(aColor, aColorH, d); vAlpha = tw * (0.45 + 0.55 * uEnergy) * (1.0 - uBurst * 0.7);',
+        '}'
+      ].join('\n'),
+      fragmentShader: [
+        'varying vec3 vColor; varying float vAlpha;',
+        'void main(){ vec2 c = gl_PointCoord - 0.5; float dd = length(c); if (dd > 0.5) discard;',
+        '  float a = smoothstep(0.5, 0.0, dd); a = a * a; gl_FragColor = vec4(vColor * (0.7 + a), a * vAlpha); }'
+      ].join('\n')
+    });
+    var pts = new THREE.Points(geo, mat); pts.frustumCulled = false; group.add(pts);
+    ready = true;
+  } catch (err) {
+    ready = false;
+    var cv = $('gl'); if (cv) cv.style.display = 'none';
+  }
+
+  var visH = 2 * 11 * Math.tan(25 * Math.PI / 180), visW = 10, baseScale = 1;
+  function resize() {
+    if (!ready) return;
+    renderer.setSize(innerWidth, innerHeight, false);
+    camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+    visW = visH * camera.aspect;
+    baseScale = Math.max(0.42, Math.min(1, visW / 13));
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  window.addEventListener('pointermove', function (e) {
+    state.px = (e.clientX / innerWidth - 0.5) * 2; state.py = (e.clientY / innerHeight - 0.5) * 2;
+  });
+
+  var tgt = { x: 0, y: 0, s: 1 }, cur = { x: 0, y: 0, s: 1 }, t0 = performance.now(), running = true;
+  document.addEventListener('visibilitychange', function () { running = !document.hidden; });
+  function frame(now) {
+    requestAnimationFrame(frame);
+    if (!ready || !running) return;
+    var t = reduce ? 1.5 : (now - t0) / 1000;
+    var wide = innerWidth >= 860;
+    if (state.kind === 'hero') { tgt.x = wide ? -visW * 0.25 : 0; tgt.y = wide ? 0 : visH * 0.26; tgt.s = baseScale; }
+    else if (state.kind === 'letter') { tgt.x = 0; tgt.y = visH * (wide ? 0.2 : 0.24); tgt.s = baseScale * (wide ? 0.62 : 0.8); }
+    else { tgt.x = 0; tgt.y = 0; tgt.s = baseScale; }
+    var k = reduce ? 1 : 0.06;
+    cur.x += (tgt.x - cur.x) * k; cur.y += (tgt.y - cur.y) * k; cur.s += (tgt.s - cur.s) * k;
+    state.morph += (state.morphT - state.morph) * (reduce ? 1 : 0.025);
+    state.pulse *= 0.95;
+    state.burst += (state.burstV - state.burst) * 0.12;
+    state.burstV *= 0.965; if (state.burstV < 0.01) state.burstV = 0;
+    var m = state.morph, tilt = (1 - m) * 1.0;
+    group.position.set(cur.x, cur.y, 0);
+    group.scale.setScalar(cur.s);
+    group.rotation.x = 0.0 + tilt - state.py * 0.08;
+    group.rotation.y = state.px * 0.18 * (0.4 + m * 0.6);
+    var u = mat.uniforms;
+    u.uMorph.value = m; u.uTime.value = t; u.uPulse.value = state.pulse;
+    u.uEnergy.value += (state.energy - u.uEnergy.value) * 0.1;
+    u.uBurst.value = state.burst;
+    renderer.render(scene, camera);
+  }
+  requestAnimationFrame(frame);
+  if (!reduce) setTimeout(function () { if (!ready) return; pickSection(); }, 900);
+})();
+</script>
+
+</body>
+</html>
